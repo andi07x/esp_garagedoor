@@ -1,0 +1,28 @@
+{
+  "name": "homebridge-esp-garagedoor",
+  "version": "1.0.10",
+  "description": "Exposes a garage door accessory to HomeBridge that uses a ESP8266",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "garagedoor"
+  ],
+  "author": "Andreas Rosenstiel",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andi07x/esp_garagedoor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/andi07x/esp_garagedoor/issues"
+  },
+  "homepage": "https://github.com/andi07x/esp_garagedoor",
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  }
+}
