@@ -1,67 +1,57 @@
-const Service, Characteristic;
- 
-module.exports = function (homebridge) {
-  Service = homebridge.hap.Service;
-  Characteristic = homebridge.hap.Characteristic;
-  homebridge.registerAccessory("esp-garagedoor", "MyGaragedoorOpener", myGdOpener);
-};
+var request = require("request");
+var Service, Characteristic;
 
-function mySwitch(log, config) {
-  this.log = log;
-  this.getUrl = url.parse(config['getUrl']);
-  this.postUrl = url.parse(config['postUrl']);
+module.exports = function(homebridge) {
+    Service = homebridge.hap.Service;
+    Characteristic = homebridge.hap.Characteristic;
+
+    homebridge.registerAccessory("homebridge-esp-garagedoor", "ArdGaragedoorOpener", ardGdOpener);
 }
 
-myGdOpener.prototype = {
-  getServices: function () {
-    let informationService = new Service.AccessoryInformation();
-    informationService
-      .setCharacteristic(Characteristic.Manufacturer, "My GdOpener manufacturer")
-      .setCharacteristic(Characteristic.Model, "My GdOpener model")
-      .setCharacteristic(Characteristic.SerialNumber, "123-456-789");
- 
-    let switchService = new Service.Switch("My GdOpener");
-    switchService
-      .getCharacteristic(Characteristic.On)
-        .on('get', this.getSwitchOnCharacteristic.bind(this))
-        .on('set', this.setSwitchOnCharacteristic.bind(this));
- 
-    this.informationService = informationService;
-    this.switchService = switchService;
-    return [informationService, switchService];
-  }
+function ardGdOpener(log, config) {
+    this.log = log;
+    this.config = config;
+    this.name = config["name"];
+    this.ip = config["ip"];
 
-getSwitchOnCharacteristic: function (next) {
-    const me = this;
-    request({
-        url: me.getUrl,
-        method: 'GET',
-    }, 
-    function (error, response, body) {
-      if (error) {
-        me.log('STATUS: ' + response.statusCode);
-        me.log(error.message);
-        return next(error);
-      }
-      return next(null, body.currentState);
-    });
-  },
-   
-  setSwitchOnCharacteristic: function (on, next) {
-    const me = this;
-    request({
-      url: me.postUrl,
-      body: {'targetState': on},
-      method: 'POST',
-      headers: {'Content-type': 'application/json'}
-    },
-    function (error, response) {
-      if (error) {
-        me.log('STATUS: ' + response.statusCode);
-        me.log(error.message);
-        return next(error);
-      }
-      return next();
-    });
-  }
-};
+    this.service = new Service.GarageDoorOpener(this.name);
+    this.service
+        .getCharacteristic(Characteristic.CurrentDoorState)
+        .on('get', this.getDoorState.bind(this));
+    this.service
+        .getCharacteristic(Characteristic.TargetDoorState)
+        .on('set', this.setTargetState.bind(this));
+}
+
+ardGdOpener.prototype.getDoorState = function(callback) {
+    request.get({
+        url: 'http://'+this.ip+'/status'
+    }, function(err, response, body) {
+        var status;
+        if  (body == 'closed') {
+            state = Characteristic.CurrentDoorState.CLOSED;
+        } else if (body == 'open') {
+            state = Characteristic.CurrentDoorState.OPEN;
+        } else if (body == 'closing') {
+            state = Characteristic.CurrentDoorState.CLOSING;
+        } else if (body == 'opening') {
+            state = Characteristic.CurrentDoorState.OPENING;
+        } else {
+            state = Characteristic.CurrentDoorState.STOPPED;
+        }
+        callback(null, status);
+    }.bind(this));
+}
+
+ardGdOpener.prototype.setTargetState = function(state, callback) {
+    var url = (state == Characteristic.TargetDoorState.CLOSED) ? "closed": "open";
+    request.get({
+        url: 'http://'+this.ip+'/' + url
+    }, function(err, response, body) {
+        callback(null, on);
+    }.bind(this));
+}
+
+ardGdOpener.prototype.getServices = function() {
+    return [this.service];
+}
